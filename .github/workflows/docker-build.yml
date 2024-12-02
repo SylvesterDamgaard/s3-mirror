@@ -26,12 +26,18 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          install: true
 
-      - name: Build and Push Docker Image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and Push Docker Image (Multi-Arch)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/sylvesterdamgaard/s3-mirror:${{ github.ref_name }}
             ghcr.io/sylvesterdamgaard/s3-mirror:latest
