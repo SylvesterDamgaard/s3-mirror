@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Load environment variables from .env file if it exists
-if [ -f "/app/.env" ]; then
-    echo "Loading environment variables from .env file"
-    export $(grep -v '^#' /app/.env | xargs)
-fi
-
 # Function to validate environment variables
 validate_env() {
     if [ -z "$1" ]; then
@@ -25,7 +19,7 @@ validate_env "$DEST_ACCESS_KEY" "DEST_ACCESS_KEY"
 validate_env "$DEST_SECRET_KEY" "DEST_SECRET_KEY"
 validate_env "$DEST_BUCKET" "DEST_BUCKET"
 
-# Configure mc aliases for source and destination
+# Configure aliases for source and destination
 mc alias set source "$SOURCE_ENDPOINT" "$SOURCE_ACCESS_KEY" "$SOURCE_SECRET_KEY"
 mc alias set dest "$DEST_ENDPOINT" "$DEST_ACCESS_KEY" "$DEST_SECRET_KEY"
 
@@ -42,11 +36,23 @@ mc ls dest/"$DEST_BUCKET" > /dev/null || { echo "Error: Unable to access destina
 
 # Start loop for continuous synchronization
 while true; do
-    # Retrieve the last sync timestamp, or start from scratch
     if [ -f "$TIMESTAMP_FILE" ]; then
+        # Read the last sync timestamp
         LAST_SYNC_TIME=$(cat "$TIMESTAMP_FILE")
-        echo "Starting synchronization from: $LAST_SYNC_TIME"
-        mc mirror --newer-than "$LAST_SYNC_TIME" source/"$SOURCE_BUCKET" dest/"$DEST_BUCKET"
+
+        # Convert ISO 8601 timestamp to relative time
+        NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        SECONDS_DIFF=$(( $(date -d "$NOW" +%s) - $(date -d "$LAST_SYNC_TIME" +%s) ))
+
+        if [ "$SECONDS_DIFF" -le 0 ]; then
+            echo "Error: Invalid timestamp difference. Skipping sync."
+            SECONDS_DIFF=0
+        fi
+
+        RELATIVE_TIME="${SECONDS_DIFF}s"
+        echo "Starting synchronization for files newer than $RELATIVE_TIME..."
+
+        mc mirror --newer-than "$RELATIVE_TIME" source/"$SOURCE_BUCKET" dest/"$DEST_BUCKET"
     else
         echo "No timestamp found. Starting synchronization from scratch (all files)."
         mc mirror source/"$SOURCE_BUCKET" dest/"$DEST_BUCKET"
