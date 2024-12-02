@@ -3,35 +3,41 @@ name: Build and Push Docker Image
 on:
   push:
     tags:
-      - 'v*' # Udløser workflowet ved tags, der matcher mønsteret v*
+      - 'v*'
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read # For at læse repository-indhold
-      packages: write # For at uploade Docker-image til GHCR
+      contents: read
+      packages: write
 
     steps:
-      - name: Tjek repository ud
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Log ind på GitHub Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Opsæt Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Byg og upload Docker-image
+      - name: Normalize variables to lowercase
+        id: vars
+        run: |
+          echo "OWNER=${{ github.repository_owner }}" >> $GITHUB_ENV # Convert owner to lowercase
+          echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV # Convert tag to lowercase
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name }}
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+            ghcr.io/${{ env.OWNER }}/s3-mirror:${{ env.TAG }}
+            ghcr.io/${{ env.OWNER }}/s3-mirror:latest
