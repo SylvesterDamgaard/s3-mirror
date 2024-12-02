@@ -33,5 +33,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/sylvesterdamgaard/s3-mirror:${{ env.TAG }}
+            ghcr.io/sylvesterdamgaard/s3-mirror:${{ github.ref_name }}
             ghcr.io/sylvesterdamgaard/s3-mirror:latest
